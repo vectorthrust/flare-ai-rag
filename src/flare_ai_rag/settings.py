@@ -24,6 +24,7 @@ class Settings(BaseSettings):
 
     # Gemini Settings
     gemini_api_key: str = ""
+    discord_bot_token: str = ""
 
     # OpenRouter Settings
     open_router_base_url: str = "https://openrouter.ai/api/v1"

@@ -13,6 +13,8 @@ from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from qdrant_client import QdrantClient
 
+import asyncio
+
 from flare_ai_rag.ai import GeminiEmbedding, GeminiProvider
 from flare_ai_rag.api import ChatRouter
 from flare_ai_rag.attestation import Vtpm
@@ -22,6 +24,9 @@ from flare_ai_rag.retriever import QdrantRetriever, RetrieverConfig, generate_co
 from flare_ai_rag.router import GeminiRouter, RouterConfig
 from flare_ai_rag.settings import settings
 from flare_ai_rag.utils import load_json
+from flare_ai_rag.state import app_state
+
+from flare_ai_rag.discord.service import start_bot
 
 logger = structlog.get_logger(__name__)
 
@@ -64,13 +69,18 @@ def setup_retriever(
         "The Qdrant collection has been generated.",
         collection_name=retriever_config.collection_name,
     )
-    # Return retriever
-    return QdrantRetriever(
+
+    retriever = QdrantRetriever(
         client=qdrant_client,
         retriever_config=retriever_config,
         embedding_client=embedding_client,
     )
+     
+    app_state.qdrant_client = qdrant_client
+    app_state.retriever_config = retriever_config
+    app_state.embedding_client = embedding_client
 
+    return retriever
 
 def setup_qdrant(input_config: dict) -> QdrantClient:
     """Initialize Qdrant client."""
@@ -159,13 +169,17 @@ def create_app() -> FastAPI:
 
 app = create_app()
 
+async def run_uvicorn():
+    config = uvicorn.Config(app, host="0.0.0.0", port=8080, lifespan="auto")
+    server = uvicorn.Server(config)
+    await asyncio.to_thread(server.run) 
+
+async def run_all():
+    asyncio.create_task(run_uvicorn())
+    await start_bot() 
 
 def start() -> None:
-    """
-    Start the FastAPI application server.
-    """
-    uvicorn.run(app, host="0.0.0.0", port=8080)  # noqa: S104
-
+    asyncio.run(run_all())
 
 if __name__ == "__main__":
     start()
