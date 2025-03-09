@@ -17,6 +17,7 @@ dependencies = [
     "qdrant-client>=1.13.2",
     "structlog>=25.1.0",
     "uvicorn>=0.34.0",
+    "discord.py>=2.5.0",
 ]
 
 [dependency-groups]
